@@ -1,0 +1,95 @@
+// This converting is only for NEC Protocol!
+
+#define IRpin_PIN PIND
+#define IRpin 2
+#define MAXPULSE 65000
+#define RESOLUTION 20
+uint16_t pulses[100][3]; 
+uint8_t currentpulse = 0; // index for pulses we're storing
+ int tab;
+ unsigned long data = 0;
+ unsigned long datab = 0;
+void setup(void) {
+  Serial.begin(9600);
+  Serial.println("Ready to decode IR!");
+}
+ 
+void loop(void) {
+  uint16_t highpulse, lowpulse; // temporary storage timing
+  highpulse = lowpulse = 0; // start out with no pulse length
+  
+  
+// while (digitalRead(IRpin)) { // this is too slow!
+    while (IRpin_PIN & (1 << IRpin)) {
+     // pin is still HIGH
+ 
+     // count off another few microseconds
+     highpulse++;
+     delayMicroseconds(RESOLUTION);
+ 
+     // If the pulse is too long, we 'timed out' - either nothing
+     // was received or the code is finished, so print what
+     // we've grabbed so far, and then reset
+     if ((highpulse >= MAXPULSE) && (currentpulse != 0)) {
+       printpulses();
+       currentpulse=0;
+       return;
+     }
+  }
+  // we didn't time out so lets stash the reading
+  if (highpulse > 20 && highpulse < 40)
+  {
+    pulses[currentpulse][2] = 0;
+  }
+  if (highpulse > 70 && highpulse < 90)
+  {
+    pulses[currentpulse][2] = 1;
+  }
+  pulses[currentpulse][0] = highpulse;
+  
+  // same as above
+  while (! (IRpin_PIN & _BV(IRpin))) {
+     // pin is still LOW
+     lowpulse++;
+     delayMicroseconds(RESOLUTION);
+     if ((lowpulse >= MAXPULSE) && (currentpulse != 0)) {
+       printpulses();
+       currentpulse=0;
+       return;
+     }
+  }
+  pulses[currentpulse][1] = lowpulse;
+ 
+  // we read one high-low pulse successfully, continue!
+  currentpulse++;
+}
+ 
+void printpulses(void) 
+{
+  for (uint8_t i = 2; i < 34; i++) 
+  {
+   if(pulses[i][2] == 0)
+   {
+     data <<= 1; 
+   }
+   else
+   {
+     data = (data << 1) | 1;
+   }
+  }
+  for (uint8_t i = 38; i < currentpulse; i++)
+  {
+    if(pulses[i][2] == 0)
+   {
+     datab <<= 1; 
+   }
+   else
+   {
+     datab = (datab << 1) | 1;
+   }
+  }
+  Serial.print(data,HEX);
+  Serial.print("\t");
+  Serial.print(datab,HEX);
+  Serial.print("\n");
+}
