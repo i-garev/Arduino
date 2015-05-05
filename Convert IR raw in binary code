@@ -1,0 +1,79 @@
+// This is only for NEC Protocol
+#define IRpin_PIN PIND
+#define IRpin 2
+
+#define MAXPULSE 65000
+ 
+#define RESOLUTION 20
+ 
+uint16_t pulses[100][3]; 
+uint8_t currentpulse = 0; 
+ int tab;
+void setup(void) {
+  Serial.begin(9600);
+  Serial.println("Ready to decode IR!");
+}
+ 
+void loop(void) {
+  uint16_t highpulse, lowpulse; 
+  highpulse = lowpulse = 0; 
+  
+  
+    while (IRpin_PIN & (1 << IRpin)) {
+     // pin is still HIGH
+ 
+     // count off another few microseconds
+     highpulse++;
+     delayMicroseconds(RESOLUTION);
+ 
+     // If the pulse is too long, we 'timed out' - either nothing
+     // was received or the code is finished, so print what
+     // we've grabbed so far, and then reset
+     if ((highpulse >= MAXPULSE) && (currentpulse != 0)) {
+       printpulses();
+       currentpulse=0;
+       return;
+     }
+  }
+  
+  if (highpulse > 20 && highpulse < 40)
+  {
+    pulses[currentpulse][2] = 0;
+  }
+  if (highpulse > 70 && highpulse < 90)
+  {
+    pulses[currentpulse][2] = 1;
+  }
+  pulses[currentpulse][0] = highpulse;
+  
+  // same as above
+  while (! (IRpin_PIN & _BV(IRpin))) {
+     // pin is still LOW
+     lowpulse++;
+     delayMicroseconds(RESOLUTION);
+     if ((lowpulse >= MAXPULSE) && (currentpulse != 0)) {
+       printpulses();
+       currentpulse=0;
+       return;
+     }
+  }
+  pulses[currentpulse][1] = lowpulse;
+ 
+  // we read one high-low pulse successfully, continue!
+  currentpulse++;
+}
+ 
+void printpulses(void) 
+{
+  for (uint8_t i = 2; i < currentpulse; i++) 
+  {
+    Serial.print(pulses[i][2]);
+    tab++;
+    if (tab == 4)
+    {
+      tab=0;
+      Serial.print("\t");
+    }
+  }
+  Serial.print("\n");
+}
